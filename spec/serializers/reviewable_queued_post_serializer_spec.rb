@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 describe ReviewableQueuedPostSerializer do
-let(:admin) { Fabricate(:admin) }
+  let(:admin) { Fabricate(:admin) }
 
   context "new topic" do
     let(:reviewable) { Fabricate(:reviewable_queued_post_topic) }
@@ -12,6 +12,7 @@ let(:admin) { Fabricate(:admin) }
       payload = json[:payload]
       expect(payload['raw']).to eq('hello world post contents.')
       expect(payload['title']).to eq('queued post title')
+      expect(payload['tags']).to eq(['cool', 'neat'])
       expect(json[:topic_id]).to be_blank
       expect(json[:can_edit]).to eq(true)
 
@@ -29,6 +30,10 @@ let(:admin) { Fabricate(:admin) }
       raw_field = fields.find { |f| f[:id] == 'payload.raw' }
       expect(raw_field).to be_present
       expect(raw_field[:type]).to eq(:editor)
+
+      tags_field = fields.find { |f| f[:id] == 'payload.tags' }
+      expect(tags_field).to be_present
+      expect(tags_field[:type]).to eq(:tags)
     end
   end
 

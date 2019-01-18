@@ -36,6 +36,8 @@ QUnit.test("Editing a reviewable", async assert => {
   await visit("/review");
   assert.ok(find(`${topic} .reviewable-action.approve`).length);
   assert.ok(!find(`${topic} .category-name`).length);
+  assert.equal(find(`${topic} .discourse-tag:eq(0)`).text(), "hello");
+  assert.equal(find(`${topic} .discourse-tag:eq(1)`).text(), "world");
 
   assert.equal(
     find(`${topic} .post-body`)
@@ -69,12 +71,22 @@ QUnit.test("Editing a reviewable", async assert => {
   );
 
   await click(`${topic} .reviewable-action.edit`);
-  let category = selectKit(`${topic} .select-kit`);
+  let category = selectKit(`${topic} .category-id .select-kit`);
   await category.expand();
   await category.selectRowByValue("6");
 
+  let tags = selectKit(`${topic} .payload-tags .mini-tag-chooser`);
+  await tags.expand();
+  await tags.fillInFilter("monkey");
+  await tags.keyboard("enter");
+
   await fillIn(".editable-field.payload-raw textarea", "new raw contents");
   await click(`${topic} .reviewable-action.save-edit`);
+
+  assert.equal(find(`${topic} .discourse-tag:eq(0)`).text(), "hello");
+  assert.equal(find(`${topic} .discourse-tag:eq(1)`).text(), "world");
+  assert.equal(find(`${topic} .discourse-tag:eq(2)`).text(), "monkey");
+
   assert.equal(
     find(`${topic} .post-body`)
       .text()

@@ -12,7 +12,8 @@ class ReviewableQueuedPostSerializer < ReviewableSerializer
     :reply_to_post_number,
     :is_poll,
     :typing_duration_msecs,
-    :composer_open_duration_msecs
+    :composer_open_duration_msecs,
+    :tags
   )
 
 end

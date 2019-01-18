@@ -1,3 +1,4 @@
+
 <div class='created-by'>
   {{#user-link user=reviewable.created_by}}
     {{avatar reviewable.created_by imageSize="large"}}
@@ -18,10 +19,10 @@
 
   <div class='post-topic'>
     {{#if reviewable.topic}}
-      {{i18n "review.new_topic"}}
+      {{i18n "review.topic"}}
       {{topic-link reviewable.topic}}
     {{else}}
-      {{i18n "review.topic"}}
+      {{i18n "review.new_topic"}}
       {{reviewable.payload.title}}
     {{/if}}
   </div>
@@ -29,4 +30,12 @@
   <div class='post-body'>
     {{cook-text reviewable.payload.raw}}
   </div>
+
+  {{#if reviewable.payload.tags}}
+    <div class="list-tags">
+      {{#each reviewable.payload.tags as |t|}}
+        {{discourse-tag t}}
+      {{/each}}
+    </div>
+  {{/if}}
 </div>

@@ -151,7 +151,8 @@ describe ReviewablesController do
             reviewable: {
               payload: {
                 raw: 'new topic op',
-                title: 'new topic title'
+                title: 'new topic title',
+                tags: ['t2', 't3', 't1']
               },
               category_id: new_category_id
             }
@@ -162,6 +163,7 @@ describe ReviewablesController do
         expect(reviewable_topic.payload['raw']).to eq('new topic op')
         expect(reviewable_topic.payload['title']).to eq('new topic title')
         expect(reviewable_topic.payload['extra']).to eq('some extra data')
+        expect(reviewable_topic.payload['tags']).to eq(['t2', 't3', 't1'])
         expect(reviewable_topic.category_id).to eq(new_category_id)
 
         json = ::JSON.parse(response.body)

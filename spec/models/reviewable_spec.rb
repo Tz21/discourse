@@ -101,73 +101,54 @@ RSpec.describe Reviewable, type: :model do
     end
   end
 
-  context "reviewable_queued_post" do
-    let(:moderator) { Fabricate(:moderator) }
-    let(:reviewable) { Fabricate(:reviewable_queued_post_topic) }
-    let(:guardian) { Guardian.new(moderator) }
+  context "events" do
+    let!(:moderator) { Fabricate(:moderator) }
+    let(:reviewable) { Fabricate(:reviewable) }
 
-    context "editing" do
-      it "is editable and returns the fields" do
-        fields = reviewable.editable_for(guardian)
-        expect(fields.has?('category_id')).to eq(true)
-        expect(fields.has?('payload.raw')).to eq(true)
-        expect(fields.has?('payload.title')).to eq(true)
+    it "triggers events on create, transition_to" do
+      event = DiscourseEvent.track(:reviewable_created) { reviewable.save! }
+      expect(event).to be_present
+      expect(event[:params].first).to eq(reviewable)
+
+      event = DiscourseEvent.track(:reviewable_transitioned_to) do
+        reviewable.transition_to(:approved, moderator)
       end
+      expect(event).to be_present
+      expect(event[:params][0]).to eq(:approved)
+      expect(event[:params][1]).to eq(reviewable)
     end
   end
 
-  context "reviewable user" do
+  context "message bus notifications" do
     let(:moderator) { Fabricate(:moderator) }
-    let(:reviewable) { Fabricate(:reviewable) }
-    context "actions_for" do
-      it "returns approve/disapprove in the pending state" do
-        actions = reviewable.actions_for(Guardian.new(moderator))
-        expect(actions.has?(:approve)).to eq(true)
-        expect(actions.has?(:reject)).to eq(true)
-      end
 
-      it "doesn't return anything in the approved state" do
-        reviewable.status = Reviewable.statuses[:approved]
-        actions = reviewable.actions_for(Guardian.new(moderator))
-        expect(actions.has?(:approve)).to eq(false)
-        expect(actions.has?(:reject)).to eq(false)
-      end
+    it "triggers a notification on create" do
+      Jobs.expects(:enqueue).with(:notify_reviewable, has_key(:reviewable_id))
+      Fabricate(:reviewable_queued_post)
     end
 
-    context "perform" do
-      it "allows us to approve a user" do
-        result = reviewable.perform(moderator, :approve)
-        expect(result.success?).to eq(true)
-
-        expect(reviewable.pending?).to eq(false)
-        expect(reviewable.approved?).to eq(true)
-        expect(reviewable.target.approved?).to eq(true)
-        expect(reviewable.target.approved_by_id).to eq(moderator.id)
-        expect(reviewable.target.approved_at).to be_present
-      end
-
-      it "allows us to reject a user" do
-        result = reviewable.perform(moderator, :reject)
-        expect(result.success?).to eq(true)
-
-        expect(reviewable.pending?).to eq(false)
-        expect(reviewable.rejected?).to eq(true)
-
-        # Rejecting deletes the user record
-        reviewable.reload
-        expect(reviewable.target).to be_blank
-      end
+    it "triggers a notification on pending -> approve" do
+      reviewable = Fabricate(:reviewable_queued_post)
+      Jobs.expects(:enqueue).with(:notify_reviewable, has_key(:reviewable_id))
+      reviewable.perform(moderator, :approve)
     end
 
-    context "#update_fields" do
-      let(:moderator) { Fabricate(:moderator) }
-      let(:reviewable) { Fabricate(:reviewable) }
+    it "triggers a notification on pending -> reject" do
+      reviewable = Fabricate(:reviewable_queued_post)
+      Jobs.expects(:enqueue).with(:notify_reviewable, has_key(:reviewable_id))
+      reviewable.perform(moderator, :reject)
+    end
 
-      it "doesn't raise errors with an empty update" do
-        expect(reviewable.update_fields(nil, moderator)).to eq(true)
-        expect(reviewable.update_fields({}, moderator)).to eq(true)
-      end
+    it "doesn't trigger a notification on approve -> reject" do
+      reviewable = Fabricate(:reviewable_queued_post, status: Reviewable.statuses[:approved])
+      Jobs.expects(:enqueue).with(:notify_reviewable, has_key(:reviewable_id)).never
+      reviewable.perform(moderator, :reject)
+    end
 
+    it "doesn't trigger a notification on reject -> approve" do
+      reviewable = Fabricate(:reviewable_queued_post, status: Reviewable.statuses[:approved])
+      Jobs.expects(:enqueue).with(:notify_reviewable, has_key(:reviewable_id)).never
+      reviewable.perform(moderator, :reject)
     end
   end
 

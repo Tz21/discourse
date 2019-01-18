@@ -21,13 +21,15 @@ export default function(helpers) {
           status: 0,
           created_at: "2019-01-14T19:49:53.571Z",
           payload: {
-            raw: "existing body"
+            raw: "existing body",
+            tags: ["hello", "world"]
           },
           can_edit: true,
           editable_fields: [
             { id: "category_id", type: "category" },
             { id: "payload.title", type: "text" },
-            { id: "payload.raw", type: "textarea" }
+            { id: "payload.raw", type: "textarea" },
+            { id: "payload.tags", type: "tags" }
           ],
           reviewable_action_ids: ["approve", "reject"]
         }
@@ -50,7 +52,7 @@ export default function(helpers) {
 
   this.put("/review/:id", request => {
     let result = { payload: {} };
-    Object.entries(parsePostData(request.requestBody).reviewable).forEach(t => {
+    Object.entries(JSON.parse(request.requestBody).reviewable).forEach(t => {
       Ember.set(result, t[0], t[1]);
     });
     return response(200, result);
